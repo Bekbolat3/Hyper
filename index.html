@@ -1,13 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HyperComplex Site</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HyperComplex Site</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app"></div>
-    <script src="script.js"></script>
+  <header>
+    <h1>HyperComplex Site</h1>
+    <nav>
+      <button id="btn-login">Войти</button>
+      <button id="btn-register">Регистрация</button>
+      <button id="btn-logout" class="hidden">Выйти</button>
+    </nav>
+  </header>
+
+  <div id="alert"></div>
+
+  <main>
+    <section id="posts-section">
+      <h2>Посты</h2>
+      <div id="new-post">
+        <textarea id="post-content" placeholder="Напишите новый пост..."></textarea>
+        <button id="btn-add-post">Добавить пост</button>
+      </div>
+      <div id="posts"></div>
+    </section>
+
+    <section id="chat-section">
+      <h2>Чат</h2>
+      <div id="chat-window"></div>
+      <input type="text" id="chat-message" placeholder="Сообщение...">
+      <button id="btn-send-chat">Отправить</button>
+    </section>
+
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <span id="close-modal" class="close">&times;</span>
+        <h2 id="modal-title"></h2>
+        <form id="auth-form">
+          <input type="text" id="username" placeholder="Имя пользователя" required>
+          <input type="password" id="password" placeholder="Пароль" required>
+          <button type="submit" id="btn-submit"></button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

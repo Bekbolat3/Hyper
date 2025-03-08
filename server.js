@@ -10,9 +10,7 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: { origin: '*' }
-});
+const io = socketIo(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -40,7 +38,7 @@ app.post('/api/register', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
+      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, created_at',
       [username, hash]
     );
     const user = result.rows[0];
@@ -62,8 +60,8 @@ app.post('/api/login', async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(400).json({ message: 'Пользователь не найден' });
     if (await bcrypt.compare(password, user.password)) {
-      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
-      res.json({ token, user: { id: user.id, username: user.username } });
+      const token = jwt.sign({ id: user.id, username: user.username, created_at: user.created_at }, JWT_SECRET);
+      res.json({ token, user: { id: user.id, username: user.username, created_at: user.created_at } });
     } else {
       res.status(400).json({ message: 'Неверный пароль' });
     }
@@ -99,6 +97,19 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Ошибка добавления поста' });
+  }
+});
+
+app.get('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Ошибка получения профиля' });
   }
 });
 

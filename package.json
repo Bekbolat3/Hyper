@@ -1,7 +1,7 @@
 {
-  "name": "hypercomplex-site-enhanced",
+  "name": "enhanced-hypercomplex-site",
   "version": "1.0.0",
-  "description": "Улучшенный гиперсложный сайт с регистрацией, постами, чатом и профилем пользователя",
+  "description": "Улучшенный гиперсложный сайт с регистрацией, постами, чатом и профилем пользователя, улучшенный дважды",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

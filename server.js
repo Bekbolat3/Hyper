@@ -5,7 +5,6 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-
 require('dotenv').config();
 
 const app = express();
@@ -36,6 +35,10 @@ function authenticateToken(req, res, next) {
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
   try {
+    const userCheck = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ message: 'Имя пользователя уже занято' });
+    }
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
       'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, created_at',
@@ -53,10 +56,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
-    );
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
     if (!user) return res.status(400).json({ message: 'Пользователь не найден' });
     if (await bcrypt.compare(password, user.password)) {
@@ -89,10 +89,7 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
   const { content } = req.body;
   const user_id = req.user.id;
   try {
-    await pool.query(
-      'INSERT INTO posts (content, user_id) VALUES ($1, $2)',
-      [content, user_id]
-    );
+    await pool.query('INSERT INTO posts (content, user_id) VALUES ($1, $2)', [content, user_id]);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -102,10 +99,7 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
 
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, username, created_at FROM users WHERE id = $1',
-      [req.user.id]
-    );
+    const result = await pool.query('SELECT id, username, created_at FROM users WHERE id = $1', [req.user.id]);
     res.json({ user: result.rows[0] });
   } catch (err) {
     console.error(err);
@@ -127,10 +121,8 @@ io.on('connection', (socket) => {
   console.log(`Пользователь ${socket.user.username} подключился к чату`);
   socket.on('chat message', (data) => {
     io.emit('chat message', { username: socket.user.username, message: data.message });
-    pool.query(
-      'INSERT INTO messages (user_id, message) VALUES ($1, $2)',
-      [socket.user.id, data.message]
-    ).catch(err => console.error(err));
+    pool.query('INSERT INTO messages (user_id, message) VALUES ($1, $2)', [socket.user.id, data.message])
+      .catch(err => console.error(err));
   });
 });
 

@@ -1,17 +1,18 @@
 const socket = io();
 
 const btnHome = document.getElementById('btn-home');
+const btnChat = document.getElementById('btn-chat');
 const btnProfile = document.getElementById('btn-profile');
 const btnLogin = document.getElementById('btn-login');
 const btnRegister = document.getElementById('btn-register');
 const btnLogout = document.getElementById('btn-logout');
-const notification = document.getElementById('notification');
+const notificationDiv = document.getElementById('notification');
 
 const contentHome = document.getElementById('content-home');
 const contentChat = document.getElementById('content-chat');
 const contentProfile = document.getElementById('content-profile');
 
-const newPostText = document.getElementById('post-content');
+const postContent = document.getElementById('post-content');
 const btnAddPost = document.getElementById('btn-add-post');
 const postsContainer = document.getElementById('posts');
 
@@ -22,52 +23,44 @@ const btnSendChat = document.getElementById('btn-send-chat');
 const profileInfo = document.getElementById('profile-info');
 const btnRefreshProfile = document.getElementById('btn-refresh-profile');
 
-const modal = document.getElementById('modal');
+const authModal = new bootstrap.Modal(document.getElementById('authModal'));
 const modalTitle = document.getElementById('modal-title');
-const closeModal = document.getElementById('close-modal');
 const authForm = document.getElementById('auth-form');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const btnSubmit = document.getElementById('btn-submit');
 
 let token = localStorage.getItem('token') || null;
-let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+let currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null;
 
 function showNotification(message, type = 'info') {
-  notification.textContent = message;
-  notification.className = 'notification ' + type;
-  setTimeout(() => notification.textContent = '', 4000);
+  notificationDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+  setTimeout(() => { notificationDiv.innerHTML = ''; }, 4000);
 }
 
-function openModal(title, submitText, callback) {
+function switchSection(section) {
+  contentHome.classList.add('d-none');
+  contentChat.classList.add('d-none');
+  contentProfile.classList.add('d-none');
+  section.classList.remove('d-none');
+}
+
+btnHome.onclick = () => { switchSection(contentHome); loadPosts(); };
+btnChat.onclick = () => { switchSection(contentChat); };
+btnProfile.onclick = () => { switchSection(contentProfile); loadProfile(); };
+
+function openAuthModal(title, submitText, callback) {
   modalTitle.textContent = title;
   btnSubmit.textContent = submitText;
-  modal.classList.remove('hidden');
   authForm.onsubmit = (e) => {
     e.preventDefault();
     callback(usernameInput.value, passwordInput.value);
-  }
+  };
+  authModal.show();
 }
-
-if (closeModal) {
-  closeModal.onclick = () => modal.classList.add('hidden');
-}
-
-btnHome.onclick = () => {
-  contentHome.classList.remove('hidden');
-  contentChat.classList.add('hidden');
-  contentProfile.classList.add('hidden');
-};
-
-btnProfile.onclick = () => {
-  contentHome.classList.add('hidden');
-  contentChat.classList.add('hidden');
-  contentProfile.classList.remove('hidden');
-  loadProfile();
-};
 
 btnRegister.onclick = () => {
-  openModal('Регистрация', 'Зарегистрироваться', (username, password) => {
+  openAuthModal('Регистрация', 'Зарегистрироваться', (username, password) => {
     fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,19 +74,19 @@ btnRegister.onclick = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         showNotification('Регистрация успешна!', 'success');
-        modal.classList.add('hidden');
+        authModal.hide();
         updateAuthUI();
         loadPosts();
       } else {
-        showNotification(data.message || 'Ошибка регистрации', 'error');
+        showNotification(data.message || 'Ошибка регистрации', 'danger');
       }
     })
-    .catch(() => showNotification('Ошибка запроса', 'error'));
+    .catch(() => showNotification('Ошибка запроса регистрации', 'danger'));
   });
 };
 
 btnLogin.onclick = () => {
-  openModal('Вход', 'Войти', (username, password) => {
+  openAuthModal('Вход', 'Войти', (username, password) => {
     fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -107,14 +100,14 @@ btnLogin.onclick = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         showNotification('Вход выполнен успешно!', 'success');
-        modal.classList.add('hidden');
+        authModal.hide();
         updateAuthUI();
         loadPosts();
       } else {
-        showNotification(data.message || 'Ошибка входа', 'error');
+        showNotification(data.message || 'Ошибка входа', 'danger');
       }
     })
-    .catch(() => showNotification('Ошибка запроса', 'error'));
+    .catch(() => showNotification('Ошибка запроса входа', 'danger'));
   });
 };
 
@@ -129,15 +122,15 @@ btnLogout.onclick = () => {
 
 function updateAuthUI() {
   if (token) {
-    btnLogin.classList.add('hidden');
-    btnRegister.classList.add('hidden');
-    btnLogout.classList.remove('hidden');
-    btnProfile.classList.remove('hidden');
+    btnLogin.classList.add('d-none');
+    btnRegister.classList.add('d-none');
+    btnLogout.classList.remove('d-none');
+    btnProfile.classList.remove('d-none');
   } else {
-    btnLogin.classList.remove('hidden');
-    btnRegister.classList.remove('hidden');
-    btnLogout.classList.add('hidden');
-    btnProfile.classList.add('hidden');
+    btnLogin.classList.remove('d-none');
+    btnRegister.classList.remove('d-none');
+    btnLogout.classList.add('d-none');
+    btnProfile.classList.add('d-none');
   }
 }
 updateAuthUI();
@@ -149,23 +142,23 @@ function loadPosts() {
   .then(res => res.json())
   .then(data => {
     postsContainer.innerHTML = '';
-    if (data.posts) {
+    if (data.posts && Array.isArray(data.posts)) {
       data.posts.forEach(post => {
-        const div = document.createElement('div');
-        div.className = 'post';
-        div.innerHTML = `<strong>${post.username}</strong>: ${post.content}<br><small>${new Date(post.created_at).toLocaleString()}</small>`;
-        postsContainer.appendChild(div);
+        const item = document.createElement('div');
+        item.className = 'list-group-item';
+        item.innerHTML = `<strong>${post.username}</strong>: ${post.content}<br><small>${new Date(post.created_at).toLocaleString()}</small>`;
+        postsContainer.appendChild(item);
       });
     }
   })
-  .catch(() => showNotification('Ошибка загрузки постов', 'error'));
+  .catch(() => showNotification('Ошибка загрузки постов', 'danger'));
 }
 if (token) loadPosts();
 
 btnAddPost.onclick = () => {
-  const content = newPostText.value.trim();
+  const content = postContent.value.trim();
   if (!content) {
-    showNotification('Пожалуйста, введите текст поста', 'error');
+    showNotification('Введите текст поста', 'danger');
     return;
   }
   fetch('/api/posts', {
@@ -179,27 +172,25 @@ btnAddPost.onclick = () => {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      newPostText.value = '';
+      postContent.value = '';
       loadPosts();
       showNotification('Пост успешно добавлен!', 'success');
     } else {
-      showNotification(data.message || 'Ошибка добавления поста', 'error');
+      showNotification(data.message || 'Ошибка добавления поста', 'danger');
     }
   })
-  .catch(() => showNotification('Ошибка запроса', 'error'));
+  .catch(() => showNotification('Ошибка запроса', 'danger'));
 };
 
 socket.on('connect', () => {
   console.log('Подключение к чату установлено');
 });
-
 socket.on('chat message', (msg) => {
-  const p = document.createElement('p');
-  p.innerHTML = `<strong>${msg.username}:</strong> ${msg.message}`;
-  chatWindow.appendChild(p);
+  const messageElem = document.createElement('p');
+  messageElem.innerHTML = `<strong>${msg.username}:</strong> ${msg.message}`;
+  chatWindow.appendChild(messageElem);
   chatWindow.scrollTop = chatWindow.scrollHeight;
 });
-
 btnSendChat.onclick = () => {
   const message = chatMessage.value.trim();
   if (!message) return;

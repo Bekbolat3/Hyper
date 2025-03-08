@@ -1,5 +1,7 @@
+// Инициализация Socket.io
 const socket = io();
 
+// DOM-элементы
 const btnHome = document.getElementById('btn-home');
 const btnChat = document.getElementById('btn-chat');
 const btnProfile = document.getElementById('btn-profile');
@@ -23,6 +25,7 @@ const btnSendChat = document.getElementById('btn-send-chat');
 const profileInfo = document.getElementById('profile-info');
 const btnRefreshProfile = document.getElementById('btn-refresh-profile');
 
+// Модальное окно (Bootstrap Modal)
 const authModal = new bootstrap.Modal(document.getElementById('authModal'));
 const modalTitle = document.getElementById('modal-title');
 const authForm = document.getElementById('auth-form');
@@ -30,14 +33,17 @@ const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const btnSubmit = document.getElementById('btn-submit');
 
+// Переменные сессии
 let token = localStorage.getItem('token') || null;
 let currentUser = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null;
 
+// Функция уведомлений
 function showNotification(message, type = 'info') {
   notificationDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
   setTimeout(() => { notificationDiv.innerHTML = ''; }, 4000);
 }
 
+// Функция переключения разделов
 function switchSection(section) {
   contentHome.classList.add('d-none');
   contentChat.classList.add('d-none');
@@ -45,10 +51,12 @@ function switchSection(section) {
   section.classList.remove('d-none');
 }
 
+// События навигации
 btnHome.onclick = () => { switchSection(contentHome); loadPosts(); };
 btnChat.onclick = () => { switchSection(contentChat); };
 btnProfile.onclick = () => { switchSection(contentProfile); loadProfile(); };
 
+// Функция открытия модального окна для авторизации/регистрации
 function openAuthModal(title, submitText, callback) {
   modalTitle.textContent = title;
   btnSubmit.textContent = submitText;
@@ -59,6 +67,7 @@ function openAuthModal(title, submitText, callback) {
   authModal.show();
 }
 
+// Регистрация с проверкой (обработка дубликатов)
 btnRegister.onclick = () => {
   openAuthModal('Регистрация', 'Зарегистрироваться', (username, password) => {
     fetch('/api/register', {
@@ -85,6 +94,7 @@ btnRegister.onclick = () => {
   });
 };
 
+// Вход
 btnLogin.onclick = () => {
   openAuthModal('Вход', 'Войти', (username, password) => {
     fetch('/api/login', {
@@ -111,6 +121,7 @@ btnLogin.onclick = () => {
   });
 };
 
+// Выход
 btnLogout.onclick = () => {
   token = null;
   currentUser = null;
@@ -120,6 +131,7 @@ btnLogout.onclick = () => {
   showNotification('Вы вышли из системы', 'info');
 };
 
+// Обновление UI в зависимости от авторизации
 function updateAuthUI() {
   if (token) {
     btnLogin.classList.add('d-none');
@@ -135,6 +147,7 @@ function updateAuthUI() {
 }
 updateAuthUI();
 
+// Загрузка постов
 function loadPosts() {
   fetch('/api/posts', {
     headers: { 'Authorization': 'Bearer ' + token }
@@ -155,6 +168,7 @@ function loadPosts() {
 }
 if (token) loadPosts();
 
+// Добавление нового поста
 btnAddPost.onclick = () => {
   const content = postContent.value.trim();
   if (!content) {
@@ -182,6 +196,7 @@ btnAddPost.onclick = () => {
   .catch(() => showNotification('Ошибка запроса', 'danger'));
 };
 
+// Обработка чата через Socket.io
 socket.on('connect', () => {
   console.log('Подключение к чату установлено');
 });
@@ -198,6 +213,7 @@ btnSendChat.onclick = () => {
   chatMessage.value = '';
 };
 
+// Загрузка профиля
 function loadProfile() {
   fetch('/api/profile', {
     headers: { 'Authorization': 'Bearer ' + token }
